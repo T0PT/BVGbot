@@ -38,7 +38,7 @@ def send_location(update, context):
                              text=f"Your location is ({latitude}, {longitude})")
 
 latitude, longtitude = 0, 0
-updater = Updater(token='6027981425:AAHdSWkDWAgxMvZZTdXXKmoTK6eo_JJmTto', use_context=True)
+updater = Updater(token='YOUR_TOKEN', use_context=True)
 dispatcher = updater.dispatcher
 dispatcher.add_handler(CommandHandler('start', start))
 dispatcher.add_handler(CommandHandler('greet_me', greet_me))

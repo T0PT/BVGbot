@@ -105,7 +105,7 @@ recieving_station=False
 first_question=True
 departures_to_send=False
 user_station='' # user_station='S+U Alexanderplatz' #name or id 900100026 , i dont know yet what is needed
-updater = Updater(token='6027981425:AAHdSWkDWAgxMvZZTdXXKmoTK6eo_JJmTto', use_context=True)
+updater = Updater(token='YOUR_TOKEN', use_context=True)
 dispatcher = updater.dispatcher
 dispatcher.add_handler(CommandHandler('start', start))
 dispatcher.add_handler(CommandHandler('greet_me', greet_me))

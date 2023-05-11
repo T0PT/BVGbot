@@ -1,6 +1,7 @@
 from telegram import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
 import bot_ui as bui
+import bot_bvg_requests as bbr
 
 def start(update, context): #first being called if any text message is sent, after that only if command '/start' is sent   
     global user
@@ -24,18 +25,34 @@ def get_location(update, context): #sends user a button, which sends his locatio
                              reply_markup=reply_markup)
     
 def find_station_fromlocation(update, context):   #when recieved location, stores it
-    global recieving_station, latitude, longitude, user_station
+    global recieving_station, latitude, longitude, user_station, recieving_answer, available_stations, stations_to_show
     if recieving_station==True: 
         latitude = update.message.location.latitude
-        longitude = update.message.location.longitude
-        #ask BVG for station
-        user_station='S+U Alexanderplatz'
+        longitude = update.message.location.longitude        
+        available_stations=bbr.find_station_from_coordinates(latitude, longitude, stations_to_show)
         recieving_station=False
-        if departures_to_send:send_departures(update, context)
-    else:        
-        latitude = update.message.location.latitude
-        longitude = update.message.location.longitude
-
+        recieving_answer=True
+        context.bot.send_message(chat_id=update.effective_chat.id,
+                             text='Here are three closest stations to you: \n',
+                             reply_markup=bui.ask_for_answer(options=available_stations,
+                                                             no_correct_answer_butt=True,
+                                                             no_correct_answer_text='Show next 3 stations'))
+    elif recieving_answer==True:
+        print(update.callback_query.data)
+        if update.callback_query.data != 'no_correct_answer':
+            print(update.callback_query.data)
+            user_station=available_stations[int(update.callback_query.data[0])]
+            if departures_to_send:send_departures(update, context)
+            recieving_answer=False
+        else:
+            stations_to_show+=3
+            available_stations=bbr.find_station_from_coordinates(latitude, longitude, stations_to_show)            
+            context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text='Here are next three closest stations to you: \n',
+                                     reply_markup=bui.ask_for_answer(options=available_stations,                                                                     
+                                                                     no_correct_answer_butt=True,
+                                                                     no_correct_answer_text='Show next 3 stations'))
+    
 def find_station_frommessage(update, context): #when recieved station, stores it
     global recieving_station, latitude, longitude, user_station, departures_to_send
     #ask BVG for station
@@ -86,6 +103,8 @@ def callback_manager(update, context): #callback manager, to be called when user
         departures_to_send=True
     elif query.data == 'set_periodic_departures_checks':
         set_periodic_departures_checks(update, context)
+    elif query.data in ['0 option', '1 option',  '2 option', '3 option', '4 option', 'no_correct_answer']:
+        find_station_fromlocation(update, context)
     query.answer()
 
 def message_filter(update, context): #is supposed to work every time text message, which does not contain command or location, is sent 
@@ -104,6 +123,10 @@ latitude, longtitude = 0, 0
 recieving_station=False
 first_question=True
 departures_to_send=False
+recieving_answer=False
+available_stations=[]
+stations_to_show=3
+available_stations=['1','2', '3','4'] #available_stations=[station_name, station_name, station_name, statioxz
 user_station='' # user_station='S+U Alexanderplatz' #name or id 900100026 , i dont know yet what is needed
 updater = Updater(token='YOUR_TOKEN', use_context=True)
 dispatcher = updater.dispatcher

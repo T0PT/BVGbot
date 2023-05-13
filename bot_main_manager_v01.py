@@ -25,36 +25,40 @@ def get_location(update, context): #sends user a button, which sends his locatio
                              reply_markup=reply_markup)
     
 def find_station_fromlocation(update, context):   #when recieved location, stores it
-    global recieving_station, latitude, longitude, user_station, recieving_answer, available_stations, stations_to_show
-    if recieving_station==True: 
+    global recieving_station, latitude, longitude, user_station, recieving_answer, available_stations, stations_to_show, available_station_ids
+    if recieving_station: 
         latitude = update.message.location.latitude
         longitude = update.message.location.longitude        
-        available_stations=bbr.find_station_from_coordinates(latitude, longitude, stations_to_show)
+        available_stations, available_station_ids=bbr.find_station_from_coordinates(latitude, longitude, stations_to_show)
         recieving_station=False
         recieving_answer=True
         context.bot.send_message(chat_id=update.effective_chat.id,
                              text='Here are three closest stations to you: \n',
-                             reply_markup=bui.ask_for_answer(options=available_stations,
+                             reply_markup=bui.ask_for_answer(options=available_stations[stations_to_show-3:stations_to_show],
                                                              no_correct_answer_butt=True,
                                                              no_correct_answer_text='Show next 3 stations'))
-    elif recieving_answer==True:
+    elif recieving_answer:
         print(update.callback_query.data)
-        if update.callback_query.data != 'no_correct_answer':
+        if 'option' == update.callback_query.data[-6:]:
             print(update.callback_query.data)
-            user_station=available_stations[int(update.callback_query.data[0])]
+            user_station[0]=available_stations[int(update.callback_query.data[0])]
+            user_station[1]=available_station_ids[int(update.callback_query.data[0])]
             if departures_to_send:send_departures(update, context)
             recieving_answer=False
+            stations_to_show=3
         else:
-            stations_to_show+=3
-            available_stations=bbr.find_station_from_coordinates(latitude, longitude, stations_to_show)            
+            print(' no correct answer')
+            if len(available_stations)-3>stations_to_show:
+                stations_to_show+=3
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text='Here are next three closest stations to you: \n',
-                                     reply_markup=bui.ask_for_answer(options=available_stations,                                                                     
+                                     reply_markup=bui.ask_for_answer(options=available_stations[stations_to_show-3:stations_to_show],                                                                     
                                                                      no_correct_answer_butt=True,
                                                                      no_correct_answer_text='Show next 3 stations'))
     
 def find_station_frommessage(update, context): #when recieved station, stores it
     global recieving_station, latitude, longitude, user_station, departures_to_send
+    # if recieving_station:
     #ask BVG for station
     print('trying to find')
     latitude = 52.520751
@@ -64,13 +68,13 @@ def find_station_frommessage(update, context): #when recieved station, stores it
     if departures_to_send:send_departures(update, context)
 
 def send_departures(update, context): #send_departures from defined station, if not defined, is to be defined
-    global departures_to_send
+    global departures_to_send, user_station
     departures_to_send=True
-    if user_station != '':
+    if user_station[1]!=0:
             #ask BVG for departures
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text='Here are the departures from your station: \n'+
-                                    10*('    '+'at '+'   '+'to '+'    '+'platform '+'    '+'\n'),
+                                    10*('    '+' at '+user_station[0]+' to '+'    '+' platform '+'    \n'),
                                     reply_markup=bui.stations_list_ask_get_new)
             departures_to_send=False
     else:
@@ -103,8 +107,8 @@ def callback_manager(update, context): #callback manager, to be called when user
         departures_to_send=True
     elif query.data == 'set_periodic_departures_checks':
         set_periodic_departures_checks(update, context)
-    elif query.data in ['0 option', '1 option',  '2 option', '3 option', '4 option', 'no_correct_answer']:
-        find_station_fromlocation(update, context)
+    elif query.data == 'no_correct_answer':
+        find_station_frommessage(update, context)
     query.answer()
 
 def message_filter(update, context): #is supposed to work every time text message, which does not contain command or location, is sent 
@@ -124,11 +128,11 @@ recieving_station=False
 first_question=True
 departures_to_send=False
 recieving_answer=False
-available_stations=[]
-stations_to_show=3
-available_stations=['1','2', '3','4'] #available_stations=[station_name, station_name, station_name, statioxz
-user_station='' # user_station='S+U Alexanderplatz' #name or id 900100026 , i dont know yet what is needed
-updater = Updater(token='YOUR_TOKEN', use_context=True)
+available_stations=[] #available_stations=[station_name, station_name, station_name, statioxz]
+available_station_ids=[] #available_station_ids=[station_id, station_id, station_id, station_id]
+stations_to_show=3 
+user_station=['',0] # user_station='S+U Alexanderplatz' #name or id 900100026 , i dont know yet what is needed
+updater = Updater(token='', use_context=True)
 dispatcher = updater.dispatcher
 dispatcher.add_handler(CommandHandler('start', start))
 dispatcher.add_handler(CommandHandler('greet_me', greet_me))

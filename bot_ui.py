@@ -39,3 +39,6 @@ def ask_for_answer(update, context, options=['1','2','3','4'], no_correct_answer
     keyboard= InlineKeyboardMarkup([[button] for button in buttons])
     context.bot.send_message(chat_id=update.effective_chat.id, text=message_text,
                              reply_markup=keyboard)
+    
+def throw_error(update, context, messasge_text):
+    context.bot.send_message(chat_id=update.effective_chat.id, text=messasge_text)

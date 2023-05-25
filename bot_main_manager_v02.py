@@ -21,7 +21,7 @@ class user(): #user object, being made first time, user messages bot
             bui.greet_me_trap_ui(update, context) 
             self.recieving_station=False
         elif self.recieving_station: #if user is asking for stations
-            self.station_names, self.station_ids = bbr.find_station_from_name(name=update.message.text)
+            self.station_names, self.station_ids, error = bbr.find_station_from_name(name=update.message.text)
             bui.ask_for_answer(update=update, context=context, options=self.station_names, no_correct_answer_text='Check at another location', 
                                message_text='Pick your station, please')
             print('ask bvg for station: ' +self.station)
@@ -48,11 +48,17 @@ class user(): #user object, being made first time, user messages bot
             latitude = update.message.location.latitude
             longitude = update.message.location.longitude    
             print('ask bvg for station: ' + str(latitude) + ' ' + str(longitude)) #ask bvg for station
-            self.station_names, self.station_ids = bbr.find_station_from_coordinates(latitude, longitude)
-            bui.ask_for_answer(update=update, context=context, options=self.station_names, no_correct_answer_text='Check at another location', 
-                               message_text='Pick your station, please')
-            self.recieving_station=False
-            self.recieving_station_options=True
+            self.station_names, self.station_ids, error = bbr.find_station_from_coordinates(latitude, longitude)
+            print(error)
+            if error==False:
+                bui.ask_for_answer(update=update, context=context, options=self.station_names, no_correct_answer_text='Check at another location', 
+                                message_text='Pick your station, please')
+                self.recieving_station=False
+                self.recieving_station_options=True
+            else:
+                bui.throw_error(update=update, context=context, message_text='Unfortunately, there was an error on our side, sorry about that, you could try agian a bit later')
+                self.recieving_station=False
+                self.recieving_station_options=True
             
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     
@@ -68,6 +74,7 @@ class user(): #user object, being made first time, user messages bot
             else:
                 number=int(data[0])
                 self.station=self.station_ids[int(number)]
+                print(self.station)
                 self.send_departures(update, context)
             self.recieving_station_options=False
 
@@ -75,10 +82,11 @@ class user(): #user object, being made first time, user messages bot
         if self.station == '':
             self.define_station(update, context)
         else:
-            line_names, times, directions, platforms = bbr.get_departures_from_station(self.station, results=50)
+            line_names, times, directions, platforms, error = bbr.get_departures_from_station(self.station, results=100)
+            print(error)
             text_to_send=''
             for i in range(len(line_names)):
-                text_to_send += line_names[i]+' to '+ directions[i] + ' at ' + times[i][11:16] + ' from ' + platforms[i] + ' platform \n'
+                text_to_send += str(line_names[i])+' to '+ str(directions[i]) + ' at ' + str(times[i][11:16]) + ' from ' + str(platforms[i]) + ' platform \n'
             # print(type(text_to_send))
             bui.send_departures(update, context, text_to_send)            
                 #CONTINUE HERE!!!!!
